@@ -1,0 +1,202 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>Projects</title>
+		<link rel="stylesheet" href="style.css">
+		<script src="scripts/jquery-3.3.1.min.js"></script>
+		<script src="scripts/jquery-ui.min.js"></script>
+		<script>
+			$(function() {
+				/* Get initial list from database */
+				$.getJSON('/projects_list')
+					.done(function(data) {
+						console.log(data);
+						var sorted_data = sort(data, data._start);
+						console.log(sorted_data)
+						makeList(sorted_data);
+					})
+					.fail(function(jqxhr, status, err) {
+						console.error(err);
+					});
+
+				/* Sort a linked list given its starting item */
+				function sort(data, current, result) {
+					result = result || [];
+					if(!current.next) return result.concat(current);
+					return sort(data, data[current.next], result.concat(current));
+				}
+
+				function makeList(data) {
+					var result = '';
+
+					data.forEach(function(list_item, index) {
+						result += 	`<li class="list-item" id=${list_item._id}>` +
+										'<div class="list-item-main">' +
+											'<div class="list-handle">' +
+												'<object data="icons/chevrons-right.svg"></object>' +
+											'</div>' +
+											`<div class="list-item-rank">${index + 1}</div>` +
+											`<div class="list-item-name">${list_item.name}</div>` +
+											'<div class="list-item-options">' +
+												'<div class="options-edit" title="Edit">' +
+													'<object data="icons/edit.svg"></object>' +
+												'</div>' +
+												'<div class="options-save" title="Save">' +
+													'<object data="icons/check.svg"></object>' +
+												'</div>' +
+												'<div class="options-delete" title="Delete">' +
+													'<object data="icons/trash.svg"></object>' +
+												'</div>' +
+											'</div>' +
+										'</div>' +
+										'<ul class="list-item-description">';
+						list_item.description.forEach(function(list_item) {
+							result += 		'<li>' +
+												'<div class="description-bullet">' +
+													'<object data="icons/chevron-right.svg"></object>' +
+												'</div>' +
+												`<div class="description-content">${list_item}</div>` +
+												'<div class="description-item-options">' +
+													'<div class="options-delete" title="Remove">' +
+														'<object data="icons/trash.svg"></object>' +
+													'</div>' +
+												'</div>' +
+											'</li>';
+						});
+						result +=		'</ul>'	+
+									'</li>';
+					});
+
+					$('#sortable').html(result);
+
+					/* TODO wrap a function around this? (init function) */
+					addMainOptionsHandlers($('.list-item'));
+					addDescriptionOptionsHandlers($('.list-item'));
+					toggleEditOptions($('.list-item'));		// The first time this is called, all options are hidden
+					$('.options-edit').show();
+					/* From now on options-edit will be hidden whenever
+					 * the other options are shown, and vice versa. */
+				}
+
+				function addMainOptionsHandlers($list_items) {
+					/* Add event handlers for the main options (that
+					 * display on the project names. */
+
+					var $options = $list_items.find('.list-item-options');
+					$options.find('.options-edit').click(function() {
+						startEdit($(this).closest('.list-item'));
+					});
+					$options.find('.options-save').click(function() {
+						stopEdit($(this).closest('.list-item'));
+					});
+					$options.find('.options-delete').click(function() {
+						// delete
+					});
+				}
+
+				function toggleEditOptions($list_items) {
+					$list_items.find('.list-item-options > *').toggle();
+					$list_items.find('.description-item-options > *').toggle();
+				}
+
+				function addDescriptionOptionsHandlers($list_items) {
+					var $options = $list_items.find('.description-item-options');
+					$options.find('.options-delete').click(function() {
+						// delete
+					});
+				}
+
+				/* Make list sortable */
+				$('#sortable').sortable({
+					axis: 'y',
+					handle: '.list-handle',
+					update: updateRankings
+				});
+
+				function updateRankings(event, ui) {
+					$('.list-item-rank').each(function(index) {
+						$(this).html(index + 1);
+					});
+
+					// TODO construct move_data using ui.item
+					// Need previous item id, this item id, next item id
+					var prev_item = ui.item.prev();
+					var next_item = ui.item.next();
+					var move_data = {
+						_id: ui.item.attr('id'),
+						prev: (prev_item.length ? prev_item.attr('id') : null),
+						next: (next_item.length ? next_item.attr('id') : null)
+					};
+
+					/* Save change to database */
+					$.post('/new_position', move_data, 'text/json')
+						.done(function(data) {
+							console.log("Changed order: " + data.status);
+						})
+						.fail(function(jqxhr, status, err) {
+							console.error(err);
+						});
+				}
+
+				/* Make it possible to edit list */
+				function startEdit($list_item) {
+					$list_item.find('.list-item-name').attr('contenteditable', 'true');
+					$list_item.find('.description-content').attr('contenteditable', 'true');
+
+					// $list_item.find('textarea').each(function () {
+					//   	$(this).css({ 'height' : `${this.scrollHeight}px`, 'overflow-y': 'hidden' });
+					// }).on('input', function () {
+					//   	$(this).css('height', 'auto');
+					//   	$(this).css('height', `${this.scrollHeight}px`);
+					// });
+
+					toggleEditOptions($list_item);
+				}
+
+				function stopEdit($list_item) {
+					$list_item.find('.list-item-name').attr('contenteditable', 'false');
+					$list_item.find('.description-content').attr('contenteditable', 'false');
+
+					toggleEditOptions($list_item);
+
+					/* TODO check elements aren't empty? */
+					/* TODO do something with edited content */
+				}
+			});
+		</script>
+	</head>
+	<body>
+		<header>
+			projects
+		</header>
+		<div class="list-container">
+			<ul id="sortable">
+<!-- 				<li>
+					<div class="list-item-main">
+						<div class="list-handle"><object data="icons/chevrons-right.svg"></object></div>
+						<div class="list-item-name">
+							1. Syncing application
+						</div>
+					</div>
+					<ul class="list-item-description">
+						<li>something descriptive</li>
+						<li>something else descriptive</li>
+					</ul>
+				</li>
+				<li>
+					<div class="list-handle"><object data="icons/chevrons-right.svg"></object></div>
+					<div class="list-item-name">
+						2. Game that is a virtual machine
+					</div>
+				</li>
+				<li>
+					<div class="list-handle"><object data="icons/chevrons-right.svg"></object></div>
+					<div class="list-item-name">
+						3. Remote control car (Raspberry Pi) - an attempt to improve something that you were too lazy to fix before
+					</div>
+				</li> -->
+			</ul>
+		</div>
+	</body>
+</html>
