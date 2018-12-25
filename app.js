@@ -29,9 +29,24 @@ app.get('/projects_list', function(req, res) {
 
 /* Middleware for post requests */
 app.use(express.json());
-app.use(express.urlencoded({
-	extended: true
-}));
+app.use(express.urlencoded({ extended: true }));
+
+app.post('/edit_item', function(req, res) {
+	var item = req.body;
+
+	db.get(item._id).then(function(body) {
+		body.name = item.name;
+		body.description = item.description;
+		return db.insert(body);
+	}).then(function() {
+		res.json({ message: 'OK' });
+	}).catch(function(error) {
+		// res.sendStatus(500);
+		res.status(500).json({
+			message: 'failed to edit item'
+		});
+	});
+})
 
 /* Change order of items in list */
 app.post('/new_position', function(req, res) {
@@ -71,16 +86,105 @@ app.post('/new_position', function(req, res) {
 			return Promise.all(promises);
 		});
 	}).then(function() {
-		res.json({ status: "ok" });
+		res.json({ message: 'OK' });
+	}).catch(function() {
+		res.status(500).json({
+			message: 'failed to update order'
+		});
 	});
 
 	/* The first pair of inserts must happen before the second pair of get requests.
 	 * This is because original.prev == item.next or original.next == item.prev
 	 * results in a conflict unless the database is updated before it is read again. */
 
-	/* TODO error handling?
-	 * Check out of sync? => in sync if get(item.prev).next == item.next
+	/* Check out of sync? => in sync if get(item.prev).next == item.next
 	 * && get(item.next).prev == item.prev */
+});
+
+app.post('/add_item', function(req, res) {
+	var item = req.body;
+
+	// let promises = [ nano.get('_uuids') ];
+	// if (item.prev) promises.push(db.get(item.prev));
+	// if (item.next) promises.push(db.get(item.next));
+
+	// Promise.all(promises).then(results) {
+	// 	item._id = result[0].uuids[0];
+	// 	let promises = [ db.insert(item) ];
+	// 	if (results.length > 1) {
+	// 		result[1].next = item._id;
+	// 		promises.push(db.insert(result[1]));
+	// 	}
+	// 	if (results.length > 2) {
+	// 		results[2].prev = item_id;
+	// 		promises.push(db.insert(result[2]))
+	// 	}
+	// 	return Promise.all(promises);
+	// }
+
+	nano.get('_uuids').then(function(body) {
+		item._id = body.uuids[0];
+		let promises = [];
+
+		promises.push(db.insert(item));
+
+		if (item.prev) promises.push(db.get(item.prev).then(function(body) {
+			body.next = item._id;
+			return db.insert(body);
+		}));
+
+		if (item.next) promises.push(db.get(item.next).then(function(body) {
+			body.prev = item._id;
+			return db.insert(body);
+		}));
+
+		return Promise.all(promises).then(function() {
+			res.json({
+				message: 'OK',
+				_id: item._id 	// return new id
+			});
+		});
+	}).catch(function(error) {
+		res.status(500).json({ message: 'failed to add item' });
+	});
+
+	/* Should new ids be handled on the client-side?
+	 * It could make certain aspects easier (possibly).
+	 * No need to pass an id from server to client.
+	 * Would just need to a quick check on the server (using regex).
+	 * In the end, it may not be worth it.
+	 */
+});
+
+app.post('/delete_item', function (req, res) {
+	var item = req.body;
+	let promises = [];
+
+	promises.push(item.prev ? db.get(item.prev) : null);
+	promises.push(item.next ? db.get(item.next) : null);
+	promises.push(db.get(item._id));
+
+	Promise.all(promises).then(function(results) {
+		[prev, next, current] = results;
+		let promises = [];
+
+		if (prev) {
+			prev.next = next ? next._id : null;
+			promises.push(db.insert(prev));
+		}
+		if (next) {
+			next.prev = prev ? prev._id : null;
+			promises.push(db.insert(next));
+		}
+		promises.push(db.destroy(current._id, current._rev));
+
+		return Promise.all(promises);
+	}).then(function() {
+		res.json({ message: 'OK' });
+	}).catch(function(error) {
+		console.log(error);
+		res.status(500).json({ message: 'failed to delete item' });
+	})
 });
 
 app.listen(port, function (err) {

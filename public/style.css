@@ -12,6 +12,7 @@ html {
 	box-sizing: border-box;
 	user-select: none;
 	-moz-user-select: none;
+	/* TODO disabled user-select is messing with ability to select content while editing */
 }
 
 * {
@@ -103,7 +104,7 @@ ul.list-item-description {
 	flex-flow: column nowrap;
 }
 
-ul.list-item-description > li {
+.description-item {
 	display: flex;
 	flex-flow: row nowrap;
 	padding-bottom: 5px;
@@ -124,7 +125,7 @@ ul.list-item-description > li {
 	width: 20px;
 }
 
-.list-item:hover .list-item-options *, .list-item-description > li:hover .description-item-options * {
+.list-item:hover .list-item-options *, .description-item:hover .description-item-options * {
 	opacity: 1;
 }
 
@@ -137,4 +138,8 @@ ul.list-item-description > li {
 
 .list-item-options object, .description-item-options object {
 	width: 14px;
+}
+
+.description-item.empty .description-bullet {
+	opacity: 0.5;	/* TODO full opacity on hover/focus? */
 }
