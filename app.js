@@ -104,25 +104,29 @@ app.post('/new_position', function(req, res) {
 app.post('/add_item', function(req, res) {
 	var item = req.body;
 
-	// let promises = [ nano.get('_uuids') ];
-	// if (item.prev) promises.push(db.get(item.prev));
-	// if (item.next) promises.push(db.get(item.next));
+	// let promises = [];
+	// promises.push(nano.get('_uuids').then(function(body) {
+	// 	return body.uuids[0];
+	// }));
+	// promises.push(item.prev ? db.get(item.prev) : null);
+	// promises.push(item.next ? db.get(item.next) : null);
 
 	// Promise.all(promises).then(results) {
-	// 	item._id = result[0].uuids[0];
+	//  [id, prev, next] = results;
+	// 	item._id = id;
 	// 	let promises = [ db.insert(item) ];
-	// 	if (results.length > 1) {
-	// 		result[1].next = item._id;
-	// 		promises.push(db.insert(result[1]));
+	// 	if (prev) {
+	// 		prev.next = id;
+	// 		promises.push(db.insert(prev));
 	// 	}
-	// 	if (results.length > 2) {
-	// 		results[2].prev = item_id;
-	// 		promises.push(db.insert(result[2]))
+	// 	if (next) {
+	// 		next.prev = id;
+	// 		promises.push(db.insert(next))
 	// 	}
 	// 	return Promise.all(promises);
 	// }
 
-	nano.get('_uuids').then(function(body) {
+	nano.request({ db: '_uuids' }).then(function(body) {
 		item._id = body.uuids[0];
 		let promises = [];
 
@@ -138,11 +142,11 @@ app.post('/add_item', function(req, res) {
 			return db.insert(body);
 		}));
 
-		return Promise.all(promises).then(function() {
-			res.json({
-				message: 'OK',
-				_id: item._id 	// return new id
-			});
+		return Promise.all(promises);
+	}).then(function() {
+		res.json({
+			message: 'OK',
+			_id: item._id 	// return new id
 		});
 	}).catch(function(error) {
 		res.status(500).json({ message: 'failed to add item' });

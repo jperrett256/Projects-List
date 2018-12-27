@@ -27,12 +27,49 @@ body {
 
 header {
 	font-family: 'Major Mono Display', 'Helvetica', sans-serif;
+	display: flex;
+	flex-flow: column nowrap;
+	align-items: center;
+	margin-top: 50px;
+	margin-bottom: 30px;
+}
+
+#title {
 	font-size: 24px;
 	letter-spacing: 5px;
 	margin-right: -5px;
 	padding: 20px;
-	margin-top: 50px;
-	margin-bottom: 50px;
+}
+
+#add-list-item-btn {
+	display: flex;
+	flex-flow: row nowrap;
+	justify-content: center;
+	font-size: 12px;
+	line-height: 16px;
+	padding: 4px;
+}
+
+#add-list-item-btn:hover {
+	background-color: #333333;
+	color: white;
+	transition: background 0.15s ease, color 0.15s ease;
+}
+
+#add-list-item-btn:hover object {
+	filter: invert(100%);
+	transition: filter 0.15s ease;
+}
+
+header object {
+	height: 16px;
+	pointer-events: none;
+}
+
+#add-list-item-btn .name {
+	display: inline-block;
+	padding-right: 4px;
+	padding-left: 4px;
 }
 
 .list-container {
@@ -44,6 +81,7 @@ header {
 	list-style-type: none;
 	display: flex;
 	flex-flow: column nowrap;
+	margin-bottom: 80px;
 }
 
 .list-item {
@@ -67,6 +105,10 @@ header {
 	/*cursor: pointer;*/
 }
 
+.list-item.empty .list-handle {
+	opacity: 0.5;
+}
+
 #sortable object {
 	height: 20px;
 	pointer-events: none;
@@ -88,14 +130,6 @@ header {
 	width: 100%;
 }
 
-.list-item-name > textarea, .list-item-description textarea {
-	width: 100%;
-	font: inherit;
-	padding: 5px;
-	margin: 0;
-	resize: none;
-}
-
 ul.list-item-description {
 	padding: 0;
 	margin-left: 50px;
@@ -109,6 +143,16 @@ ul.list-item-description {
 	flex-flow: row nowrap;
 	padding-bottom: 5px;
 	width: 100%;
+}
+
+.description-bullet {
+	display: inline-block;
+	width: 25px;
+	flex: 0 0 auto;
+}
+
+.description-item.empty .description-bullet {
+	opacity: 0.5;	/* TODO full opacity on hover/focus? */
 }
 
 .description-content {
@@ -138,8 +182,4 @@ ul.list-item-description {
 
 .list-item-options object, .description-item-options object {
 	width: 14px;
-}
-
-.description-item.empty .description-bullet {
-	opacity: 0.5;	/* TODO full opacity on hover/focus? */
 }

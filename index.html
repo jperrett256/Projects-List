@@ -45,6 +45,9 @@
 												'<div class="options-save" title="Save">' +
 													'<object data="icons/check.svg"></object>' +
 												'</div>' +
+												'<div class="options-revert" title="Discard">' +
+													'<object data="icons/corner-down-left.svg"></object>' +
+												'</div>' +
 												'<div class="options-delete" title="Delete">' +
 													'<object data="icons/trash.svg"></object>' +
 												'</div>' +
@@ -72,21 +75,30 @@
 
 					optionsSetup($('.list-item'));	// Setup list item options for all list items
 
-					/* DEBUG */
-					$(document).keypress(function(e) {
-						if (e.key === '\\') {
-							console.log('DEBUG: add item');
-							createEmptyItem();
-						}
-					});
+					$('.list-item-description').sortable({
+						axis: 'y',
+						handle: '.description-bullet' /* TODO rename this class? */
+					}).sortable('disable');
 				}
 
 				/* Make list sortable */
 				$('#sortable').sortable({
 					axis: 'y',
-					handle: '.list-handle',
+					handle: '.list-handle', /* TODO rename class to .list-item-handle? */
 					update: updateRankings
 				});
+
+				$('#add-list-item-btn').click(function() {
+					createEmptyItem();
+				});
+
+				/* Shortcut for adding item */
+				$(document).keypress(function(e) {
+					if (e.key === '+') {
+						createEmptyItem();
+					}
+				});
+				// TODO need to not stopPropagation on other keypress event handlers
 
 				/* Initialise list item options */
 				function optionsSetup($items) {
@@ -109,6 +121,9 @@
 					$options.find('.options-save').click(function() {
 						saveEdit($(this).closest('.list-item'));
 					});
+					$options.find('.options-revert').click(function() {
+						cancelEdit($(this).closest('.list-item'));
+					})
 					$options.find('.options-delete').click(function() {
 						removeItem($(this).closest('.list-item'));
 					});
@@ -133,7 +148,16 @@
 							}
 							/* TODO switch statement? */
 						}
-					})
+					}).keyup(function(e) {
+						let $item = $(this).closest('.list-item');
+						if ($(this).text()) {
+							/* If this item has text, remove empty class */
+							$item.removeClass('empty');
+						} else {
+							/* If empty, add empty class */
+							$item.addClass('empty');
+						}
+					});
 				}
 
 				/* This adds event handlers to description items.
@@ -242,7 +266,7 @@
 						'<div class="description-bullet">' +
 							'<object data="icons/chevron-right.svg"></object>' +
 						'</div>' +
-						`<div class="description-content"></div>` +
+						'<div class="description-content"></div>' +
 						'<div class="description-item-options">' +
 							'<div class="options-delete" title="Remove">' +
 								'<object data="icons/trash.svg"></object>' +
@@ -273,9 +297,13 @@
 					let $name = $list_item.find('.list-item-name').attr('contenteditable', 'true');
 					focusAtEnd($name);
 
+					let $description_list = $list_item.find('.list-item-description')
+
 					/* Add an empty description item */
-					addEmptyDescriptionItem($list_item.find('.list-item-description'));
-					/* TODO removal of empty description items could be managed with the special 'empty' class */
+					addEmptyDescriptionItem($description_list);
+
+					/* Make description items sortable */
+					$description_list.sortable('enable');
 
 					/* Make it possible to edit description elements */
 					$list_item.find('.description-content').attr('contenteditable', 'true');
@@ -286,20 +314,37 @@
 					/* TODO make options on name element stay visible even when not hovering? */
 				}
 
-				/* TODO rename to saveEdit? */
 				function saveEdit($list_item) {
 					$list_item.find('.list-item-name').attr('contenteditable', 'false');
 					$list_item.find('.description-content').attr('contenteditable', 'false');
 					toggleEditOptions($list_item);
 
-					/* TODO Remove selections with element */
+					/* Disable sorting on description items */
+					$list_item.find('.list-item-description').sortable('disable');
+
+					/* Remove all current selections */
+					let selection = window.getSelection();
+				    selection.removeAllRanges();
+
 					/* TODO filter out newlines? Maybe not worth the concern */
-					/* TODO handle empty name? */
+
+					let name_contents = $list_item.find('.list-item-name').text();
+					let id = $list_item.attr('id');
+
+					/* Handle empty name */
+					if (!name_contents) {
+						if (id) {
+							removeItem($list_item);
+						} else {
+							$list_item.remove();
+							updateIndices();
+						}
+						return;
+					}
 
 					/* Collect data to send */
-					let edit_data = {
-						_id: $list_item.attr('id'),
-						name: $list_item.find('.list-item-name').text(),
+					let submit_data = {
+						name: name_contents,
 						description: $list_item.find('.description-content').map(function() {
 							let content = $(this).text();
 							/* Remove empty description items from the DOM */
@@ -310,17 +355,47 @@
 						})
 					};
 					/* TODO if we are using classes to label empty description items, we might have
-					 * a better way of filtering them out here. */
+					 * a better way of filtering them out here. Although actually, it may not cover
+					 * all edge cases (e.g. press enter while holding backspace - backspace keyup event
+					 * never registered), so should just test. */
 
-					$.post({
-						url: '/edit_item',
-						data: JSON.stringify(edit_data),
-						contentType: 'application/json'
-					}).done(function(res) {
-						console.log("Changed data: " + res.message);
-					}).fail(function(jqXHR, status, error) {
-						console.error(error);
-					});
+					if (id) {
+						/* If id has been set, just updating existing item */
+						submit_data._id = id;
+
+						/* Update the existing item in the database */
+						$.post({
+							url: '/edit_item',
+							data: JSON.stringify(submit_data),
+							contentType: 'application/json'
+						}).done(function(res) {
+							console.log("Changed data: " + res.message);
+						}).fail(function(jqXHR, status, error) {
+							console.error(error);
+						});
+					} else {
+						/* If the item has no id, add new item */
+						let $prev = $list_item.prev();
+						let $next = $list_item.next();
+
+						submit_data.prev = $prev.length > 0 ? $prev.attr('id') : null;
+						submit_data.next = $next.length > 0 ? $next.attr('id') : null;
+
+						/* Add the new item to the database */
+						$.post({
+							url: '/add_item',
+							data: JSON.stringify(submit_data),
+							contentType: 'application/json'
+						}).done(function(res) {
+							console.log('Added item: ' + res.message);
+							/* Update id of added item */
+							$list_item.attr('id', res._id);
+							// TODO it may just be less hassle to generate uuids client-side
+						}).fail(function(jqXHR, status, error) {
+							console.log(error);
+						});
+					}
+
 				}
 
 				function cancelEdit($list_item) {
@@ -330,29 +405,43 @@
 					// toggleEditOptions($list_item);
 
 					let id = $list_item.attr('id');
-					$list_item.html(editBackup[id]);
-					delete editBackup[id];
+					if (id) {
+						$list_item.html(editBackup[id]);
+						delete editBackup[id];
 
-					addMainOptionsHandlers($list_item);
-					addDescriptionOptionsHandlers($list_item);
+						addMainOptionsHandlers($list_item);
+						addDescriptionOptionsHandlers($list_item);
+					} else {
+						/* If item has no id (was new item not yet added), remove from DOM */
+						$list_item.remove();
+						updateIndices();
+					}
+
+					$list_item.find('.list-item-description').sortable({
+						axis: 'y',
+						handle: '.description-bullet' /* TODO rename this class? */
+					}).sortable('disable');	/* TODO repeated code */
 				}
 
-				function createEmptyItem() {
-					// TODO
+				function createEmptyItem() { /* TODO rename to addItem? */
+
 					$new = $(
-						'<li class="list-item">' +
+						'<li class="list-item empty">' +
 							'<div class="list-item-main">' +
 								'<div class="list-handle">' +
 									'<object data="icons/chevrons-right.svg"></object>' +
 								'</div>' +
-								`<div class="list-item-rank"></div>` +
-								`<div class="list-item-name"></div>` +
+								'<div class="list-item-rank"></div>' +
+								'<div class="list-item-name"></div>' +
 								'<div class="list-item-options">' +
 									'<div class="options-edit" title="Edit">' +
 										'<object data="icons/edit.svg"></object>' +
 									'</div>' +
 									'<div class="options-save" title="Save">' +
 										'<object data="icons/check.svg"></object>' +
+									'</div>' +
+									'<div class="options-revert" title="Discard">' +
+										'<object data="icons/corner-down-left.svg"></object>' +
 									'</div>' +
 									'<div class="options-delete" title="Delete">' +
 										'<object data="icons/trash.svg"></object>' +
@@ -366,52 +455,31 @@
 					optionsSetup($new);
 					updateIndices();
 
+
+					$new.find('.list-item-description').sortable({
+						axis: 'y',
+						handle: '.description-bullet' /* TODO rename this class? */
+					}).sortable('disable');
+
 					startEdit($new);
-				}
-
-				function addItem($list_item) {
-					// TODO merge with saveEdit
-
-					/* Get data for new item */
-					let $prev = $list_item.prev();
-					let $next = $list_item.next();
-
-					let new_data = {
-						//_id: $list_item.attr('id'),
-						prev: $prev.length > 0 ? $prev.attr('id') : null,
-						next: $next.length > 0 ? $next.attr('id') : null,
-						name: $list_item.find('.list-item-name').text(),
-						description: $list_item.find('.description-content').map(function() {
-							let content = $(this).text();
-							/* Remove empty description items from the DOM */
-							if (!content.length) $(this).closest('.description-item').remove();
-							return content;
-						}).toArray().filter(function(content, index) {
-							return content.length;		// filter out the empty strings
-						})	/* TODO clean: repeated code */
-					}
-
-					/* Add the new item to the database */
-					$.post({
-						url: '/add_item',
-						data: JSON.stringify(new_data),
-						contentType: 'application/json'
-					}).done(function(res) {
-						console.log('Added item: ' + res.message);
-						/* Update id of added item */
-						$list_item.attr('id', res._id);
-						// It may just be less hassle to generate uuids client-side
-					}).fail(function(jqXHR, status, error) {
-						console.log(error);
-					});
+					/* TODO clean up tons of repeated code */
 				}
 
 				function removeItem($list_item) {
+					let id = $list_item.attr('id');
+
+					/* If this is an item currently being added, just remove from DOM */
+					if (!id) {
+						$list_item.remove();
+						updateIndices();
+						return;
+					}
+
 					var prev_item = $list_item.prev();
 					var next_item = $list_item.next();
 
 					var remove_data = {
-						_id: $list_item.attr('id'),
+						_id: id,
 						prev: (prev_item.length ? prev_item.attr('id') : null),
 						next: (next_item.length ? next_item.attr('id') : null)
 					};
@@ -435,7 +503,11 @@
 	</head>
 	<body>
 		<header>
-			projects
+			<div id="title">projects</div>
+			<div id="add-list-item-btn">
+				<object data="icons/plus.svg"></object>
+				<div class="name">add</div>
+			</div>
 		</header>
 		<div class="list-container">
 			<ul id="sortable"></ul>
