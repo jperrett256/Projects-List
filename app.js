@@ -112,7 +112,7 @@ app.post('/add_item', function(req, res) {
 	// promises.push(item.next ? db.get(item.next) : null);
 
 	// Promise.all(promises).then(results) {
-	//  [id, prev, next] = results;
+	//  let [id, prev, next] = results;
 	// 	item._id = id;
 	// 	let promises = [ db.insert(item) ];
 	// 	if (prev) {
@@ -125,6 +125,8 @@ app.post('/add_item', function(req, res) {
 	// 	}
 	// 	return Promise.all(promises);
 	// }
+	/* TODO this method would allow us to check if the data
+	 * is in sync */
 
 	nano.request({ db: '_uuids' }).then(function(body) {
 		item._id = body.uuids[0];
@@ -169,7 +171,7 @@ app.post('/delete_item', function (req, res) {
 	promises.push(db.get(item._id));
 
 	Promise.all(promises).then(function(results) {
-		[prev, next, current] = results;
+		let [prev, next, current] = results;
 		let promises = [];
 
 		if (prev) {

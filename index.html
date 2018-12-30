@@ -33,7 +33,7 @@
 					data.forEach(function(list_item, index) {
 						result += 	`<li class="list-item" id=${list_item._id}>` +
 										'<div class="list-item-main">' +
-											'<div class="list-handle">' +
+											'<div class="list-item-handle">' +
 												'<object data="icons/chevrons-right.svg"></object>' +
 											'</div>' +
 											`<div class="list-item-rank">${index + 1}</div>` +
@@ -56,7 +56,7 @@
 										'<ul class="list-item-description">';
 						list_item.description.forEach(function(list_item) {
 							result += 		'<li class="description-item">' +
-												'<div class="description-bullet">' +
+												'<div class="description-item-handle">' +
 													'<object data="icons/chevron-right.svg"></object>' +
 												'</div>' +
 												`<div class="description-content">${list_item}</div>` +
@@ -75,39 +75,111 @@
 
 					optionsSetup($('.list-item'));	// Setup list item options for all list items
 
-					$('.list-item-description').sortable({
+					descriptionSortableSetup($('.list-item-description'));
+
+					/* Make list sortable */
+					$('#sortable').sortable({
 						axis: 'y',
-						handle: '.description-bullet' /* TODO rename this class? */
-					}).sortable('disable');
+						handle: '.list-item-handle',
+						update: updateRankings
+					});
+
+					$('#add-list-item-btn').click(function() {
+						createEmptyItem();
+					});
+
+					/* Shortcut for adding item */
+					$(document).keypress(function(e) {
+						if (e.key === '+') {
+							createEmptyItem();
+						}
+					});
+					// TODO need to not stopPropagation on other keypress event handlers
 				}
 
-				/* Make list sortable */
-				$('#sortable').sortable({
-					axis: 'y',
-					handle: '.list-handle', /* TODO rename class to .list-item-handle? */
-					update: updateRankings
-				});
+				function createEmptyItem() { /* TODO rename to addItem? */
 
-				$('#add-list-item-btn').click(function() {
-					createEmptyItem();
-				});
+					$new = $(
+						'<li class="list-item empty">' +
+							'<div class="list-item-main">' +
+								'<div class="list-item-handle">' +
+									'<object data="icons/chevrons-right.svg"></object>' +
+								'</div>' +
+								'<div class="list-item-rank"></div>' +
+								'<div class="list-item-name"></div>' +
+								'<div class="list-item-options">' +
+									'<div class="options-edit" title="Edit">' +
+										'<object data="icons/edit.svg"></object>' +
+									'</div>' +
+									'<div class="options-save" title="Save">' +
+										'<object data="icons/check.svg"></object>' +
+									'</div>' +
+									'<div class="options-revert" title="Discard">' +
+										'<object data="icons/corner-down-left.svg"></object>' +
+									'</div>' +
+									'<div class="options-delete" title="Delete">' +
+										'<object data="icons/trash.svg"></object>' +
+									'</div>' +
+								'</div>' +
+							'</div>' +
+							'<ul class="list-item-description"></ul>' +
+						'</li>'
+					).prependTo('#sortable');
 
-				/* Shortcut for adding item */
-				$(document).keypress(function(e) {
-					if (e.key === '+') {
-						createEmptyItem();
-					}
-				});
-				// TODO need to not stopPropagation on other keypress event handlers
+					optionsSetup($new);
+					updateIndices();
+
+					descriptionSortableSetup($new.find('.list-item-description'));
+
+					startEdit($new);
+				}
+
+				/* Add empty description item (in editable state) for inserting new content */
+				function addEmptyDescriptionItem($description) {
+					$extra = $('<li class="description-item empty">' +
+						'<div class="description-item-handle">' +
+							'<object data="icons/chevron-right.svg"></object>' +
+						'</div>' +
+						'<div class="description-content"></div>' +
+						'<div class="description-item-options">' +
+							'<div class="options-delete" title="Remove">' +
+								'<object data="icons/trash.svg"></object>' +
+							'</div>' +
+						'</div>' +
+					'</li>').appendTo($description);
+
+					addDescriptionOptionsHandlers($extra);
+					$extra.find('.description-content').attr('contenteditable', 'true');
+
+					/* TODO if there ever were an extra function just for initialising description items
+					 * (would be called in optionsSetup), then we could easy modify this to work with that.
+					 * We would call the initialisation function, then call toggleEditOptions and set the
+					 * contenteditable attribute to make the new description item editable. */
+				}
+
+				/* TODO having repeated HTML is unideal. */
+
+				/* Takes one or more description containers and makes it sortable */
+				function descriptionSortableSetup($description) {
+					$description.sortable({
+						axis: 'y',
+						handle: '.description-item-handle'
+					}).sortable('disable');
+				}
 
 				/* Initialise list item options */
 				function optionsSetup($items) {
 					addMainOptionsHandlers($items);
 					addDescriptionOptionsHandlers($items);
-					toggleEditOptions($items);		// The first time this is called, all options are hidden
-					$items.find('.options-edit').show();
+					toggleEditOptions($items);
+					$items.find('.options-edit').show();	// The first time this is called, all options are hidden
 					/* From now on options-edit will be hidden whenever
 					 * the other options are shown, and vice versa. */
+				}
+
+				function toggleEditOptions($list_items) {
+					$list_items.find('.list-item-options > *').toggle();
+					$list_items.find('.description-item-options > *').toggle();
 				}
 
 				function addMainOptionsHandlers($list_items) {
@@ -127,7 +199,6 @@
 					$options.find('.options-delete').click(function() {
 						removeItem($(this).closest('.list-item'));
 					});
-					/* TODO revert option? */
 
 					$list_items.find('.list-item-name').keypress(function (e) {
 						if ($(this).attr('contenteditable') === 'true') {
@@ -197,10 +268,7 @@
 								$item.removeClass('empty');
 								if (!$item.siblings('.description-item.empty').length) {
 									/* Add empty item if there are no longer any empty items */
-									let $extra = addEmptyDescriptionItem($(this).closest('.list-item-description'));
-									toggleEditOptions($extra);
-									$extra.find('.description-content').attr('contenteditable', 'true');
-									/* TODO could just have addEmptyDescriptionItem put the empty item in an editable state */
+									addEmptyDescriptionItem($(this).closest('.list-item-description'));
 								}
 							}
 						} else {
@@ -210,39 +278,9 @@
 					});
 				}
 
-				function toggleEditOptions($list_items) {
-					$list_items.find('.list-item-options > *').toggle();
-					$list_items.find('.description-item-options > *').toggle();
-				}
-
 				function updateIndices() {
 					$('.list-item-rank').each(function(index) {
 						$(this).html(index + 1);
-					});
-				}
-
-				function updateRankings(event, ui) {
-					updateIndices();
-
-					// TODO construct move_data using ui.item
-					// Need previous item id, this item id, next item id
-					var prev_item = ui.item.prev();
-					var next_item = ui.item.next();
-					var move_data = {
-						_id: ui.item.attr('id'),
-						prev: (prev_item.length ? prev_item.attr('id') : null),
-						next: (next_item.length ? next_item.attr('id') : null)
-					};
-
-					/* Save change to database */
-					$.post({
-						url: '/new_position',
-						data: JSON.stringify(move_data),
-						contentType: 'application/json'
-					}).done(function(res) {
-						console.log("Changed order: " + res.message);
-					}).fail(function(jqxhr, status, error) {
-						console.error(error);
 					});
 				}
 
@@ -260,29 +298,46 @@
 					}
 				}
 
-				/* Add empty description item for adding new content */
-				function addEmptyDescriptionItem($description) {
-					$extra = $('<li class="description-item empty">' +
-						'<div class="description-bullet">' +
-							'<object data="icons/chevron-right.svg"></object>' +
-						'</div>' +
-						'<div class="description-content"></div>' +
-						'<div class="description-item-options">' +
-							'<div class="options-delete" title="Remove">' +
-								'<object data="icons/trash.svg"></object>' +
-							'</div>' +
-						'</div>' +
-					'</li>').appendTo($description);
+				function getSurroundingItems($list_item) {
+					let $prev = $list_item.prev();
+					let $next = $list_item.next();
 
-					addDescriptionOptionsHandlers($extra);
-					toggleEditOptions($extra);
-					/* TODO could have an extra function just for initialising description items,
-					 * that is part of optionsSetup */
+					/* Skip over items not yet added to the database
+					 * when getting the previous and next items */
+					while ($prev.length && !$prev.attr('id')) {
+						$prev = $prev.prev();
+					}
+					while ($next.length && !$next.attr('id')) {
+						$next = $next.next();
+					}
 
-					/* TODO having repeated html is unideal. Could have a function that creates description
-					 * items based on some input text. Could create empty description items by passing in an
-					 * empty string. */
-					return $extra;
+					return [$prev, $next];
+				}
+
+				function updateRankings(event, ui) {
+					updateIndices();
+
+					let id = ui.item.attr('id');
+					if (id) {
+						let [$prev, $next] = getSurroundingItems(ui.item);
+
+						var move_data = {
+							_id: id,
+							prev: ($prev.length ? $prev.attr('id') : null),
+							next: ($next.length ? $next.attr('id') : null)
+						};
+
+						/* Save change to database */
+						$.post({
+							url: '/new_position',
+							data: JSON.stringify(move_data),
+							contentType: 'application/json'
+						}).done(function(res) {
+							console.log("Changed order: " + res.message);
+						}).fail(function(jqxhr, status, error) {
+							console.error(error);
+						});
+					}
 				}
 
 				/* TODO switch to cookies? */
@@ -299,9 +354,6 @@
 
 					let $description_list = $list_item.find('.list-item-description')
 
-					/* Add an empty description item */
-					addEmptyDescriptionItem($description_list);
-
 					/* Make description items sortable */
 					$description_list.sortable('enable');
 
@@ -310,6 +362,9 @@
 
 					/* Toggle visible options */
 					toggleEditOptions($list_item);
+
+					/* Add an empty description item (in editable state) */
+					addEmptyDescriptionItem($description_list);
 
 					/* TODO make options on name element stay visible even when not hovering? */
 				}
@@ -342,6 +397,15 @@
 						return;
 					}
 
+					/* TODO may be able to avoid the complications below by just removing description
+					 * items with the 'empty' class. However, not all edge cases are covered (e.g. press
+					 * enter while holding backspace - backspace keyup event never registered). May be
+					 * able to fix this by also checking if the focused element is empty at the start of
+					 * this function. */
+					// let $focus = $list_item.find('.description-item:focus');
+					// if (!$focus.text()) $focus.remove();
+					// $list_item.find('.description-item.empty').remove();
+
 					/* Collect data to send */
 					let submit_data = {
 						name: name_contents,
@@ -354,13 +418,10 @@
 							return content.length;		// filter out the empty strings
 						})
 					};
-					/* TODO if we are using classes to label empty description items, we might have
-					 * a better way of filtering them out here. Although actually, it may not cover
-					 * all edge cases (e.g. press enter while holding backspace - backspace keyup event
-					 * never registered), so should just test. */
 
+					/* If id has been set, just updating existing
+					 * item. Otherwise, this is a new item to add. */
 					if (id) {
-						/* If id has been set, just updating existing item */
 						submit_data._id = id;
 
 						/* Update the existing item in the database */
@@ -374,12 +435,10 @@
 							console.error(error);
 						});
 					} else {
-						/* If the item has no id, add new item */
-						let $prev = $list_item.prev();
-						let $next = $list_item.next();
+						let [$prev, $next] = getSurroundingItems($list_item);
 
-						submit_data.prev = $prev.length > 0 ? $prev.attr('id') : null;
-						submit_data.next = $next.length > 0 ? $next.attr('id') : null;
+						submit_data.prev = $prev.length ? $prev.attr('id') : null;
+						submit_data.next = $next.length ? $next.attr('id') : null;
 
 						/* Add the new item to the database */
 						$.post({
@@ -399,11 +458,6 @@
 				}
 
 				function cancelEdit($list_item) {
-					/* TODO seems to be some repeated code. Maybe just modify saveEdit to take an extra boolean 'save' parameter? */
-					// $list_item.find('.list-item-name').attr('contenteditable', 'false');
-					// $list_item.find('.description-content').attr('contenteditable', 'false');
-					// toggleEditOptions($list_item);
-
 					let id = $list_item.attr('id');
 					if (id) {
 						$list_item.html(editBackup[id]);
@@ -417,52 +471,7 @@
 						updateIndices();
 					}
 
-					$list_item.find('.list-item-description').sortable({
-						axis: 'y',
-						handle: '.description-bullet' /* TODO rename this class? */
-					}).sortable('disable');	/* TODO repeated code */
-				}
-
-				function createEmptyItem() { /* TODO rename to addItem? */
-
-					$new = $(
-						'<li class="list-item empty">' +
-							'<div class="list-item-main">' +
-								'<div class="list-handle">' +
-									'<object data="icons/chevrons-right.svg"></object>' +
-								'</div>' +
-								'<div class="list-item-rank"></div>' +
-								'<div class="list-item-name"></div>' +
-								'<div class="list-item-options">' +
-									'<div class="options-edit" title="Edit">' +
-										'<object data="icons/edit.svg"></object>' +
-									'</div>' +
-									'<div class="options-save" title="Save">' +
-										'<object data="icons/check.svg"></object>' +
-									'</div>' +
-									'<div class="options-revert" title="Discard">' +
-										'<object data="icons/corner-down-left.svg"></object>' +
-									'</div>' +
-									'<div class="options-delete" title="Delete">' +
-										'<object data="icons/trash.svg"></object>' +
-									'</div>' +
-								'</div>' +
-							'</div>' +
-							'<ul class="list-item-description"></ul>' +
-						'</li>'
-					).prependTo('#sortable');
-
-					optionsSetup($new);
-					updateIndices();
-
-
-					$new.find('.list-item-description').sortable({
-						axis: 'y',
-						handle: '.description-bullet' /* TODO rename this class? */
-					}).sortable('disable');
-
-					startEdit($new);
-					/* TODO clean up tons of repeated code */
+					descriptionSortableSetup($list_item.find('.list-item-description'));
 				}
 
 				function removeItem($list_item) {

@@ -97,7 +97,7 @@ header object {
  	margin-bottom: 15px;
 }
 
-.list-handle {
+.list-item-handle {
 	flex-shrink: 0;
 	display: inline-block;
 	font-size: 0;
@@ -105,7 +105,7 @@ header object {
 	/*cursor: pointer;*/
 }
 
-.list-item.empty .list-handle {
+.list-item.empty .list-item-handle {
 	opacity: 0.5;
 }
 
@@ -145,14 +145,18 @@ ul.list-item-description {
 	width: 100%;
 }
 
-.description-bullet {
+.description-item-handle {
 	display: inline-block;
 	width: 25px;
 	flex: 0 0 auto;
 }
 
-.description-item.empty .description-bullet {
+.description-item.empty .description-item-handle {
 	opacity: 0.5;	/* TODO full opacity on hover/focus? */
+}
+
+.description-item.empty .description-item-options > * {
+	display: none;
 }
 
 .description-content {
@@ -160,7 +164,7 @@ ul.list-item-description {
 	line-height: 20px;
 }
 
-.list-item-options *, .description-item-options * {
+.list-item-options > *, .description-item-options > * {
 	opacity: 0;
 	transition: opacity 0.1s ease;
 	display: flex;
@@ -168,6 +172,10 @@ ul.list-item-description {
 	justify-content: center;
 	width: 20px;
 }
+
+/*.description-item-options > * {
+	opacity: 0.5;
+}*/
 
 .list-item:hover .list-item-options *, .description-item:hover .description-item-options * {
 	opacity: 1;
