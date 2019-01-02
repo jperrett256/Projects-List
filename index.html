@@ -39,18 +39,7 @@
 											`<div class="list-item-rank">${index + 1}</div>` +
 											`<div class="list-item-name">${list_item.name}</div>` +
 											'<div class="list-item-options">' +
-												'<div class="options-edit" title="Edit">' +
-													'<object data="icons/edit.svg"></object>' +
-												'</div>' +
-												'<div class="options-save" title="Save">' +
-													'<object data="icons/check.svg"></object>' +
-												'</div>' +
-												'<div class="options-revert" title="Discard">' +
-													'<object data="icons/corner-down-left.svg"></object>' +
-												'</div>' +
-												'<div class="options-delete" title="Delete">' +
-													'<object data="icons/trash.svg"></object>' +
-												'</div>' +
+												addMainOptions() +
 											'</div>' +
 										'</div>' +
 										'<ul class="list-item-description">';
@@ -93,8 +82,32 @@
 						if (e.key === '+') {
 							createEmptyItem();
 						}
-					});
-					// TODO need to not stopPropagation on other keypress event handlers
+						// TODO need to not stopPropagation on other keypress event handlers
+					});/*.click(function() {
+						$('.options-menu').addClass('disabled');
+					});*/
+				}
+
+				function addMainOptions() {
+					return (
+						'<div class="options-edit" title="Edit">' +
+							'<object data="icons/edit.svg"></object>' +
+						'</div>' +
+						'<div class="options-menu-anchor">' +
+							'<object data="icons/more-vertical.svg"></object>' +
+							'<div class="options-menu disabled">' +
+								'<div class="options-save" title="Save">' +
+									'<object data="icons/check.svg"></object>' +
+								'</div>' +
+								'<div class="options-revert" title="Revert">' +
+									'<object data="icons/corner-down-left.svg"></object>' +
+								'</div>' +
+								'<div class="options-delete" title="Delete">' +
+									'<object data="icons/trash.svg"></object>' +
+								'</div>' +
+							'</div>' +
+						'</div>'
+					);
 				}
 
 				function createEmptyItem() { /* TODO rename to addItem? */
@@ -108,18 +121,7 @@
 								'<div class="list-item-rank"></div>' +
 								'<div class="list-item-name"></div>' +
 								'<div class="list-item-options">' +
-									'<div class="options-edit" title="Edit">' +
-										'<object data="icons/edit.svg"></object>' +
-									'</div>' +
-									'<div class="options-save" title="Save">' +
-										'<object data="icons/check.svg"></object>' +
-									'</div>' +
-									'<div class="options-revert" title="Discard">' +
-										'<object data="icons/corner-down-left.svg"></object>' +
-									'</div>' +
-									'<div class="options-delete" title="Delete">' +
-										'<object data="icons/trash.svg"></object>' +
-									'</div>' +
+									addMainOptions() +
 								'</div>' +
 							'</div>' +
 							'<ul class="list-item-description"></ul>' +
@@ -229,6 +231,29 @@
 							$item.addClass('empty');
 						}
 					});
+
+					/* Options menu */
+					$list_items.find('.list-item-options .options-menu-anchor').click(function() {
+						let $menu = $(this).find('.options-menu');
+						if ($menu.hasClass('disabled')) {
+							$menu.css({ opacity: 0 });
+							let $menu_items = $menu.children().css({ opacity: 0 });
+							$menu.removeClass('disabled').animate({ opacity: 1 }, 100, function() {
+								/* Apply animations on children sequentially */
+								(function next(index) {
+									if (index < $menu_items.length) {
+										$menu_items.eq(index).animate({ opacity: 1 }, 100, next.bind(this, index + 1));
+									}
+								})(0);
+							});
+						} else {
+							$menu.animate({ opacity: 0 }, 100, function() {
+								$menu.addClass('disabled');
+							})
+						}
+						return false;
+					});
+					// TODO
 				}
 
 				/* This adds event handlers to description items.

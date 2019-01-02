@@ -121,7 +121,7 @@ app.post('/add_item', function(req, res) {
 	// 	}
 	// 	if (next) {
 	// 		next.prev = id;
-	// 		promises.push(db.insert(next))
+	// 		promises.push(db.insert(next));
 	// 	}
 	// 	return Promise.all(promises);
 	// }
