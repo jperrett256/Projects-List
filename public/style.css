@@ -164,7 +164,7 @@ ul.list-item-description {
 	line-height: 20px;
 }
 
-.list-item-options > *, .description-item-options > *, .options-menu > * {
+.list-item-options > *, .description-item-options > *, .options-menu-list > * {
 	opacity: 0;
 	transition: opacity 0.1s ease;
 	display: flex;
@@ -195,17 +195,46 @@ ul.list-item-description {
 
 .options-menu-anchor {
 	position: relative;
-	opacity: 0.8;	/* TODO make all options slightly faint, only full opacity on hover? */
+	opacity: 0.6;	/* TODO make all options slightly faint, only full opacity on hover? */
 }
 
 .options-menu {
-	display: flex;
-	flex-flow: column nowrap;
-	width: 20px;
 	position: absolute;
-	right: -20px;
+	right: -35px;
+	border-left: 1px solid #444444;
+	padding-left: 5px;
+	overflow: visible !important;
 }
 
 .options-menu.disabled {
 	display: none;
+}
+
+.inner-nub, .outer-nub {
+	position: absolute;
+	display: inline-block;
+	height: 8px;
+	width: 8px;
+	top: 5px;
+}
+
+.outer-nub {
+	transform: translate(-10px) rotate(45deg);
+	z-index: 0;
+	background-color: #444444;
+}
+
+.inner-nub {
+	transform: translate(-9px) rotate(45deg);
+	z-index: 1;
+	background-color: white;
+}
+
+.options-menu-list {
+	display: flex;
+	flex-flow: column nowrap;
+	width: 20px;
+	z-index: 2;
+	height: auto;
+	transition: height 1s ease;
 }

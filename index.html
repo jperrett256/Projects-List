@@ -82,10 +82,8 @@
 						if (e.key === '+') {
 							createEmptyItem();
 						}
-						// TODO need to not stopPropagation on other keypress event handlers
-					});/*.click(function() {
-						$('.options-menu').addClass('disabled');
-					});*/
+						// TODO handle stopPropagation correctly on other keypress event handlers
+					});
 				}
 
 				function addMainOptions() {
@@ -96,14 +94,18 @@
 						'<div class="options-menu-anchor">' +
 							'<object data="icons/more-vertical.svg"></object>' +
 							'<div class="options-menu disabled">' +
-								'<div class="options-save" title="Save">' +
-									'<object data="icons/check.svg"></object>' +
-								'</div>' +
-								'<div class="options-revert" title="Revert">' +
-									'<object data="icons/corner-down-left.svg"></object>' +
-								'</div>' +
-								'<div class="options-delete" title="Delete">' +
-									'<object data="icons/trash.svg"></object>' +
+								'<div class="inner-nub"></div>' +
+								'<div class="outer-nub"></div>' +
+								'<div class="options-menu-list">' +
+									'<div class="options-save" title="Save">' +
+										'<object data="icons/check.svg"></object>' +
+									'</div>' +
+									'<div class="options-revert" title="Revert">' +
+										'<object data="icons/corner-down-left.svg"></object>' +
+									'</div>' +
+									'<div class="options-delete" title="Delete">' +
+										'<object data="icons/trash.svg"></object>' +
+									'</div>' +
 								'</div>' +
 							'</div>' +
 						'</div>'
@@ -185,9 +187,14 @@
 				}
 
 				function addMainOptionsHandlers($list_items) {
+					/* Ensure menu is hidden when any option is clicked */
+					$('.options-menu-list > *').click(function() {
+						console.log('ah');
+						$(this).closest('.options-menu').addClass('disabled');
+					});
+
 					/* Add event handlers for the main options (that
 					 * display on the project names. */
-
 					var $options = $list_items.find('.list-item-options');
 					$options.find('.options-edit').click(function() {
 						startEdit($(this).closest('.list-item'));
@@ -233,12 +240,15 @@
 					});
 
 					/* Options menu */
-					$list_items.find('.list-item-options .options-menu-anchor').click(function() {
+					$list_items.find('.options-menu-anchor').click(function() {
 						let $menu = $(this).find('.options-menu');
 						if ($menu.hasClass('disabled')) {
-							$menu.css({ opacity: 0 });
-							let $menu_items = $menu.children().css({ opacity: 0 });
-							$menu.removeClass('disabled').animate({ opacity: 1 }, 100, function() {
+							let full_height = $menu.css({ height: 'auto' }).height();	// get height to transition to
+							/* Set state to transition from */
+							$menu.css({ opacity: 0, height: '30px' });
+							let $menu_items = $menu.find('.options-menu-list').children().css({ opacity: 0 });
+							/* Start animation */
+							$menu.removeClass('disabled').animate({ opacity: 1, height: full_height }, 100, function() {
 								/* Apply animations on children sequentially */
 								(function next(index) {
 									if (index < $menu_items.length) {
@@ -247,13 +257,13 @@
 								})(0);
 							});
 						} else {
+							/* Hide menu */
 							$menu.animate({ opacity: 0 }, 100, function() {
 								$menu.addClass('disabled');
 							})
 						}
-						return false;
-					});
-					// TODO
+					}).find('.options-menu').click(function() { return false; }); /* Prevent the menu area surrounding the buttons
+																				   * from hiding the menu when clicked */
 				}
 
 				/* This adds event handlers to description items.
