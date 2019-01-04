@@ -77,7 +77,7 @@ header object {
 	font-size: 12px;
 }
 
-#sortable {
+#projects-list {
 	list-style-type: none;
 	display: flex;
 	flex-flow: column nowrap;
@@ -109,7 +109,7 @@ header object {
 	opacity: 0.5;
 }
 
-#sortable object {
+#projects-list object {
 	height: 20px;
 	pointer-events: none;
 }
@@ -151,7 +151,7 @@ ul.list-item-description {
 	flex: 0 0 auto;
 }
 
-.description-item.empty .description-item-handle {
+.description-item.empty .description-item-handle, .description-item.removing .description-item-handle {
 	opacity: 0.5;	/* TODO full opacity on hover/focus? */
 }
 

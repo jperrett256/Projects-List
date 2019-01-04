@@ -8,6 +8,16 @@
 		<script src="scripts/jquery-ui.min.js"></script>
 		<script>
 			$(function() {
+				/* Create initial event handlers */
+				$('#add-list-item-btn').click(function() {
+						createEmptyItem();
+				});
+				$(document).keypress(function(e) {
+					if (e.key === 'n') {
+						createEmptyItem();
+					}
+				})
+
 				/* Get initial list from database */
 				$.getJSON('/projects_list')
 					.done(function(data) {
@@ -50,9 +60,7 @@
 												'</div>' +
 												`<div class="description-content">${list_item}</div>` +
 												'<div class="description-item-options">' +
-													'<div class="options-delete" title="Remove">' +
-														'<object data="icons/trash.svg"></object>' +
-													'</div>' +
+													addDescriptionOptions() +
 												'</div>' +
 											'</li>';
 						});
@@ -60,30 +68,21 @@
 									'</li>';
 					});
 
-					$('#sortable').html(result);
-
-					optionsSetup($('.list-item'));	// Setup list item options for all list items
-
-					descriptionSortableSetup($('.list-item-description'));
-
-					/* Make list sortable */
-					$('#sortable').sortable({
+					/* Create sortable list */
+					$('#projects-list').html(result).sortable({
 						axis: 'y',
 						handle: '.list-item-handle',
 						update: updateRankings
 					});
 
-					$('#add-list-item-btn').click(function() {
-						createEmptyItem();
-					});
+					optionsSetup($('.list-item'));	// Setup list item options for all list items
 
-					/* Shortcut for adding item */
-					$(document).keypress(function(e) {
-						if (e.key === '+') {
-							createEmptyItem();
-						}
-						// TODO handle stopPropagation correctly on other keypress event handlers
-					});
+					descriptionSortableSetup($('.list-item-description'));
+
+					/* Fade page in */
+					setTimeout(function() {
+						$('body').animate({ opacity: 1 }, 1000);
+					}, 500);
 				}
 
 				function addMainOptions() {
@@ -112,6 +111,14 @@
 					);
 				}
 
+				function addDescriptionOptions() {
+					return (
+						'<div class="options-remove" title="Remove">' +
+							'<object data="icons/x.svg"></object>' +
+						'</div>'
+					);
+				}
+
 				function createEmptyItem() { /* TODO rename to addItem? */
 
 					$new = $(
@@ -128,7 +135,7 @@
 							'</div>' +
 							'<ul class="list-item-description"></ul>' +
 						'</li>'
-					).prependTo('#sortable');
+					).prependTo('#projects-list');
 
 					optionsSetup($new);
 					updateIndices();
@@ -146,9 +153,7 @@
 						'</div>' +
 						'<div class="description-content"></div>' +
 						'<div class="description-item-options">' +
-							'<div class="options-delete" title="Remove">' +
-								'<object data="icons/trash.svg"></object>' +
-							'</div>' +
+							addDescriptionOptions() +
 						'</div>' +
 					'</li>').appendTo($description);
 
@@ -187,12 +192,6 @@
 				}
 
 				function addMainOptionsHandlers($list_items) {
-					/* Ensure menu is hidden when any option is clicked */
-					$('.options-menu-list > *').click(function() {
-						console.log('ah');
-						$(this).closest('.options-menu').addClass('disabled');
-					});
-
 					/* Add event handlers for the main options (that
 					 * display on the project names. */
 					var $options = $list_items.find('.list-item-options');
@@ -200,7 +199,15 @@
 						startEdit($(this).closest('.list-item'));
 					});
 					$options.find('.options-save').click(function() {
-						saveEdit($(this).closest('.list-item'));
+						let $item = $(this).closest('.list-item');
+						/* This tiny delay is to prevent the edit button
+						 * from flickering into existence momentarily
+						 * when the save button is pressed. An alternative
+						 * solution is just to give the list items more
+						 * horizontal padding */
+						setTimeout(function() {
+							saveEdit($item);
+						}, 20);
 					});
 					$options.find('.options-revert').click(function() {
 						cancelEdit($(this).closest('.list-item'));
@@ -225,6 +232,8 @@
 								/* Discard changes */
 								cancelEdit($(this).closest('.list-item'));
 								return false;
+							} else if (e.key === 'n') {
+								e.stopPropagation();	// shortcut key should be inactive here
 							}
 							/* TODO switch statement? */
 						}
@@ -270,9 +279,14 @@
 				 * Can take one or many description items, or one or many list items as an argument. */
 				function addDescriptionOptionsHandlers($items) {
 					var $options = $items.find('.description-item-options');
-					$options.find('.options-delete').click(function() {
+					$options.find('.options-remove').click(function() {
 						/* Remove the item from the DOM */
 						$(this).closest('.description-item').remove();
+					}).hover(function() {
+						/* When hovering, lower description item handle opacity */
+						$(this).closest('.description-item').addClass('removing');
+					}, function() {
+						$(this).closest('.description-item').removeClass('removing');
 					});
 
 					$items.find('.description-content').keypress(function (e) {
@@ -292,6 +306,8 @@
 								/* Discard changes */
 								cancelEdit($(this).closest('.list-item'));
 								return false;
+							} else if (e.key === 'n') {
+								e.stopPropagation();	// shortcut key should be inactive here
 							}
 							/* TODO switch statement? */
 						}
@@ -401,7 +417,9 @@
 					/* Add an empty description item (in editable state) */
 					addEmptyDescriptionItem($description_list);
 
-					/* TODO make options on name element stay visible even when not hovering? */
+					/* Trigger drop down menu */
+					$list_item.find('.options-menu').addClass('disabled');
+					$list_item.find('.options-menu-anchor').click();
 				}
 
 				function saveEdit($list_item) {
@@ -490,6 +508,8 @@
 						});
 					}
 
+					/* Animate back smoothly */
+					$list_item.css({ opacity: 0 }).animate({ opacity: 1 }, 200);
 				}
 
 				function cancelEdit($list_item) {
@@ -500,6 +520,9 @@
 
 						addMainOptionsHandlers($list_item);
 						addDescriptionOptionsHandlers($list_item);
+
+						/* Animate back smoothly */
+						$list_item.css({ opacity: 0 }).animate({ opacity: 1 }, 600);
 					} else {
 						/* If item has no id (was new item not yet added), remove from DOM */
 						$list_item.remove();
@@ -510,42 +533,45 @@
 				}
 
 				function removeItem($list_item) {
-					let id = $list_item.attr('id');
+					/* Fade out quickly, then delete item */
+					$list_item.animate({ opacity: 0 }, 100, function() {
+						let id = $list_item.attr('id');
 
-					/* If this is an item currently being added, just remove from DOM */
-					if (!id) {
-						$list_item.remove();
-						updateIndices();
-						return;
-					}
+						/* If this is an item currently being added, just remove from DOM */
+						if (!id) {
+							$list_item.remove();
+							updateIndices();
+							return;
+						}
 
-					var prev_item = $list_item.prev();
-					var next_item = $list_item.next();
+						var prev_item = $list_item.prev();
+						var next_item = $list_item.next();
 
-					var remove_data = {
-						_id: id,
-						prev: (prev_item.length ? prev_item.attr('id') : null),
-						next: (next_item.length ? next_item.attr('id') : null)
-					};
+						var remove_data = {
+							_id: id,
+							prev: (prev_item.length ? prev_item.attr('id') : null),
+							next: (next_item.length ? next_item.attr('id') : null)
+						};
 
-					$.post({
-						url: '/delete_item',
-						data: JSON.stringify(remove_data),
-						contentType: 'application/json'
-					}).done(function(res) {
-						console.log('Deleted item: ' + res.message);
-						/* Remove item from DOM */
-						$list_item.remove();
-						/* Fix indices */
-						updateIndices();
-					}).fail(function(jqXHR, status, error) {
-						console.log(error);
+						$.post({
+							url: '/delete_item',
+							data: JSON.stringify(remove_data),
+							contentType: 'application/json'
+						}).done(function(res) {
+							console.log('Deleted item: ' + res.message);
+							/* Remove item from DOM */
+							$list_item.remove();
+							/* Fix indices */
+							updateIndices();
+						}).fail(function(jqXHR, status, error) {
+							console.log(error);
+						});
 					});
 				}
 			});
 		</script>
 	</head>
-	<body>
+	<body style="opacity: 0">
 		<header>
 			<div id="title">projects</div>
 			<div id="add-list-item-btn">
@@ -554,7 +580,7 @@
 			</div>
 		</header>
 		<div class="list-container">
-			<ul id="sortable"></ul>
+			<ul id="projects-list"></ul>
 		</div>
 	</body>
 </html>
