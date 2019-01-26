@@ -9,12 +9,13 @@
 		<script>
 			$(function() {
 				/* Create initial event handlers */
-				$('#add-list-item-btn').click(function() {
-						createEmptyItem();
+				$('#add-list-item-btn').click(function(e) {
+						console.log(e);
+						createEmptyItem(!e.shiftKey);
 				});
 				$(document).keypress(function(e) {
-					if (e.key === 'n') {
-						createEmptyItem();
+					if (e.key === 'n' || e.key === 'N') {
+						createEmptyItem(!e.shiftKey);
 					}
 				})
 
@@ -22,7 +23,7 @@
 				$.getJSON('/projects_list')
 					.done(function(data) {
 						console.log(data);
-						var sorted_data = sort(data, data._start);
+						var sorted_data = data._start ? sort(data, data._start) : [];
 						console.log(sorted_data)
 						makeList(sorted_data);
 					})
@@ -119,7 +120,7 @@
 					);
 				}
 
-				function createEmptyItem() { /* TODO rename to addItem? */
+				function createEmptyItem(atTop) { /* TODO rename to addItem? */
 
 					$new = $(
 						'<li class="list-item empty">' +
@@ -135,7 +136,10 @@
 							'</div>' +
 							'<ul class="list-item-description"></ul>' +
 						'</li>'
-					).prependTo('#projects-list');
+					);
+
+					/* Add to beginning or end depending on if input is true/false */
+					atTop ? $new.prependTo('#projects-list') : $new.appendTo('#projects-list');
 
 					optionsSetup($new);
 					updateIndices();
@@ -232,7 +236,7 @@
 								/* Discard changes */
 								cancelEdit($(this).closest('.list-item'));
 								return false;
-							} else if (e.key === 'n') {
+							} else if (e.key === 'n' || e.key === 'N') {
 								e.stopPropagation();	// shortcut key should be inactive here
 							}
 							/* TODO switch statement? */
@@ -306,7 +310,7 @@
 								/* Discard changes */
 								cancelEdit($(this).closest('.list-item'));
 								return false;
-							} else if (e.key === 'n') {
+							} else if (e.key === 'n' || e.key === 'N') {
 								e.stopPropagation();	// shortcut key should be inactive here
 							}
 							/* TODO switch statement? */

@@ -10,8 +10,8 @@
 
 html {
 	box-sizing: border-box;
-	user-select: none;
-	-moz-user-select: none;
+	/*user-select: none;
+	-moz-user-select: none;*/
 	/* TODO disabled user-select is messing with ability to select content while editing */
 }
 
@@ -32,6 +32,8 @@ header {
 	align-items: center;
 	margin-top: 50px;
 	margin-bottom: 30px;
+	user-select: none;
+	-moz-user-select: none;
 }
 
 #title {
@@ -75,6 +77,11 @@ header object {
 .list-container {
 	font-family: 'Montserrat';
 	font-size: 12px;
+}
+
+.list-item-main, .description-item {
+	user-select: none;
+	-moz-user-select: none;
 }
 
 #projects-list {
@@ -128,6 +135,10 @@ header object {
 	display: inline-block;
 	line-height: 20px;
 	width: 100%;
+}
+
+.list-item-name:focus, .description-content:focus {
+	outline: 0;
 }
 
 ul.list-item-description {
