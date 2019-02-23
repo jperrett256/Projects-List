@@ -8,7 +8,7 @@ Note: This application requires couchDB to be installed.
 
 On a command line in the root directory of this project:
 1. Run `npm install` to install required dependencies
-2. Start the server by running `node app.js [port]`
+2. Start the server by running `node app.js [port] [database name]`
 
 ## Wishlist
 

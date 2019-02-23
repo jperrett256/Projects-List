@@ -13,7 +13,7 @@
 						console.log(e);
 						createEmptyItem(!e.shiftKey);
 				});
-				$(document).keypress(function(e) {
+				$(document).keydown(function(e) {
 					if (e.key === 'n' || e.key === 'N') {
 						createEmptyItem(!e.shiftKey);
 					}
@@ -220,7 +220,7 @@
 						removeItem($(this).closest('.list-item'));
 					});
 
-					$list_items.find('.list-item-name').keypress(function (e) {
+					$list_items.find('.list-item-name').keydown(function (e) {
 						if ($(this).attr('contenteditable') === 'true') {
 							if (e.key === 'Enter') {
 								/* Save changes */
@@ -293,7 +293,7 @@
 						$(this).closest('.description-item').removeClass('removing');
 					});
 
-					$items.find('.description-content').keypress(function (e) {
+					$items.find('.description-content').keydown(function (e) {
 						if ($(this).attr('contenteditable') === 'true') {
 							if (e.key === 'Enter') {
 								/* Save changes */

@@ -5,7 +5,7 @@ const port = process.argv[2];
 
 /* Handle database requests */
 const nano = require('nano')('http://localhost:5984');
-const db = nano.db.use('projects_list');
+const db = nano.db.use(process.argv[3]);
 
 /* Serve the main content */
 app.use(express.static(path.join(__dirname, 'public')));
